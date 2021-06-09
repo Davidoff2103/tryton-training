@@ -3,5 +3,11 @@
     <label name="name"/>
     <field name="name"/>
     <label name="gender"/>
-    <field name="gender"/>
+    <field name="gender"/>ç
+    <separator id="dates" string="Dates" colspan="4"/>
+    <label name="birth_date"/>
+    <field name="birth_date"/>
+    <label name="death_date"/>
+    <field name="death_date"/>
+    <field name="books" colspan="4"/>
 </form>
