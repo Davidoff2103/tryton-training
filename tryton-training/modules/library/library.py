@@ -15,6 +15,8 @@ class Genre(ModelSQL, ModelView):
     'Genre'
     __name__ = 'library.genre'
 
+    name = fields.Char('Name', required=True)
+
 
 class Editor(ModelSQL, ModelView):
     'Editor'
@@ -22,8 +24,11 @@ class Editor(ModelSQL, ModelView):
 
     genres = fields.Many2Many('library.editor-library.genre', 'editor',
         'genre', 'Genres')
-
-
+    name = fields.Char('Name', required=True)
+    creation_date = fields.Date('Creation date',
+        help='The date at which the editor was created')
+    
+    
 class EditorGenreRelation(ModelSQL):
     'Editor - Genre relation'
     __name__ = 'library.editor-library.genre'
@@ -39,7 +44,11 @@ class Author(ModelSQL, ModelView):
     __name__ = 'library.author'
 
     books = fields.One2Many('library.book', 'author', 'Books')
-
+    name = fields.Char('Name', required=True)
+    gender = fields.Selection([('man', 'Man'), ('woman', 'Woman')], 'Gender')
+    birth_date = fields.Date('Birth date')
+    death_date = fields.Date('Death date')
+    
 
 class Book(ModelSQL, ModelView):
     'Book'
@@ -53,11 +62,23 @@ class Book(ModelSQL, ModelView):
         required=False)
     editor = fields.Many2One('library.editor', 'Editor', ondelete='RESTRICT',
         required=True)
-
-
+    summary = fields.Text('Summary')
+    page_count = fields.Integer('Page Count',
+        help='The number of page in the book')
+    edition_stopped = fields.Boolean('Edition stopped',
+        help='If True, this book will not be printed again in this version')
+    cover = fields.Binary('Cover')
+    title = fields.Char('Title', required=True)
+    description = fields.Char('Description')
+    
+    
 class Exemplary(ModelSQL, ModelView):
     'Exemplary'
     __name__ = 'library.book.exemplary'
 
     book = fields.Many2One('library.book', 'Book', ondelete='CASCADE',
         required=True)
+    acquisition_price = fields.Numeric('Acquisition Price', digits=(16, 2))
+    acquisition_date = fields.Date('Acquisition Date')
+    identifier = fields.Char('Identifier', required = True)
+
