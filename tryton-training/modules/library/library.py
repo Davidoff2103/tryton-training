@@ -7,9 +7,8 @@ from sql.aggregate import Count, Max
 from trytond.pool import Pool
 from trytond.transaction import Transaction
 from trytond.model import ModelSQL, ModelView, fields
-
-from trytond.pyson import Eval, If, Bool
 from trytond.model import Unique
+from trytond.pyson import Eval, If, Bool
 
 
 __all__ = [
@@ -27,6 +26,8 @@ class Genre(ModelSQL, ModelView):
     __name__ = 'library.genre'
 
     name = fields.Char('Name', required=True)
+    editors = fields.Many2Many('library.editor-library.genre', 'genre',
+        'editor', 'Editors', readonly=True)
 
 
 class Editor(ModelSQL, ModelView):
@@ -166,6 +167,7 @@ class Book(ModelSQL, ModelView):
         'Exemplaries')
     title = fields.Char('Title', required=True)
     genre = fields.Many2One('library.genre', 'Genre', ondelete='RESTRICT',
+        domain=[('editors', '=', Eval('editor'))], depends=['editor'],
         required=False)
     editor = fields.Many2One('library.editor', 'Editor', ondelete='RESTRICT',
         domain=[If(
@@ -246,33 +248,6 @@ class Book(ModelSQL, ModelView):
             result[book_id] = count
         return result
 
-    @classmethod
-    def __setup__(cls):
-        super(Book, cls).__setup__()
-        cls._error_messages.update({
-                'invalid_isbn': 'ISBN should only be digits',
-                'bad_isbn_size': 'ISBN must have 13 digits',
-                'invalid_isbn_checksum': 'ISBN checksum invalid',
-                })
-
-    @classmethod
-    def validate(cls, books):
-        for book in books:
-            if not book.isbn:
-                continue
-            try:
-                if int(book.isbn) < 0:
-                    raise ValueError
-            except ValueError:
-                cls.raise_user_error('invalid_isbn')
-            if len(book.isbn) != 13:
-                cls.raise_user_error('bad_isbn_size')
-            checksum = 0
-            for idx, digit in enumerate(book.isbn):
-                checksum += int(digit) * (1 if idx % 2 else 3)
-            if checksum % 10:
-                cls.raise_user_error('invalid_isbn_checksum')
-
 
 class Exemplary(ModelSQL, ModelView):
     'Exemplary'
@@ -286,9 +261,6 @@ class Exemplary(ModelSQL, ModelView):
     acquisition_price = fields.Numeric('Acquisition Price', digits=(16, 2),
         domain=['OR', ('acquisition_price', '=', None),
             ('acquisition_price', '>', 0)])
-
-    def get_rec_name(self, name):
-    	return '%s: %s' % (self.book.rec_name, self.identifier)
     	
     @classmethod
     def __setup__(cls):
@@ -299,3 +271,5 @@ class Exemplary(ModelSQL, ModelView):
                 'The identifier must be unique!'),
             ]
 
+    def get_rec_name(self, name):
+    	return '%s: %s' % (self.book.rec_name, self.identifier)
