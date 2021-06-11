@@ -85,7 +85,7 @@ class Author(ModelSQL, ModelView):
     gender = fields.Selection([('man', 'Man'), ('woman', 'Woman')], 'Gender')
     age = fields.Function(
         fields.Integer('Age', states={'invisible': ~Eval('death_date')}),
-        'getter_age')
+        'on_change_with_age')
     number_of_books = fields.Function(
         fields.Integer('Number of books'),
         'getter_number_of_books')
@@ -97,16 +97,6 @@ class Author(ModelSQL, ModelView):
         fields.Many2One('library.book', 'Latest Book',
             states={'invisible': ~Eval('books', False)}),
         'getter_latest_book')
-                
-    def getter_age(self, name):
-    	if not self.birth_date:
-    	    return None
-    	end_date = self.death_date or datetime.date.today()
-    	age = end_date.year - self.birth_date.year
-    	if (end_date.month, end_date.day) < (
-    		self.birth_date.month, self.birth_date.day):
-    	    age -= 1
-    	return age
 
     def getter_genres(self, name):
         genres = set()
@@ -155,7 +145,36 @@ class Author(ModelSQL, ModelView):
     def searcher_genres(cls, name, clause):
         return []
 
+    @fields.depends('birth_date', 'death_date')
+    def on_change_with_age(self, name=None):
+        if not self.birth_date:
+            return None
+        end_date = self.death_date or datetime.date.today()
+        age = end_date.year - self.birth_date.year
+        if (end_date.month, end_date.day) < (
+                self.birth_date.month, self.birth_date.day):
+            age -= 1
+        return age
+        
+    @fields.depends('books')
+    def on_change_books(self):
+        if not self.books:
+            self.genres = []
+            self.number_of_books = 0
+            return
+        self.number_of_books, genres = 0, set()
+        for book in self.books:
+            self.number_of_books += 1
+            if book.genre:
+                genres.add(book.genre)
+        self.genres = list(genres)
 
+    @fields.depends('birth_date')
+    def on_change_birth_date(self):
+        if not self.birth_date:
+            self.death_date = None
+
+        
 class Book(ModelSQL, ModelView):
     'Book'
     __name__ = 'library.book'
@@ -248,6 +267,31 @@ class Book(ModelSQL, ModelView):
             result[book_id] = count
         return result
 
+    @classmethod
+    def default_exemplaries(cls):
+        return [{}]
+        
+    @fields.depends('description', 'summary')
+    def on_change_with_description(self):
+        if self.description:
+            return self.description
+        if not self.summary:
+            return ''
+        return self.summary.split('.')[0]
+
+    @fields.depends('editor', 'genre')
+    def on_change_editor(self):
+        if not self.editor:
+            return
+        if self.genre and self.genre not in self.editor.genres:
+            self.genre = None
+        if not self.genre and len(self.editor.genres) == 1:
+            self.genre = self.editor.genres[0]
+            
+    @fields.depends('exemplaries')
+    def on_change_with_number_of_exemplaries(self):
+        return len(self.exemplaries or [])
+        
 
 class Exemplary(ModelSQL, ModelView):
     'Exemplary'
@@ -273,3 +317,7 @@ class Exemplary(ModelSQL, ModelView):
 
     def get_rec_name(self, name):
     	return '%s: %s' % (self.book.rec_name, self.identifier)
+    	
+    @classmethod
+    def default_acquisition_date(cls):
+        return datetime.date.today()
