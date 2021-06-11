@@ -16,7 +16,7 @@ def register():
         wizard.FuseBooksSelectMain,
         wizard.FuseBooksPreview,
         module='library', type_='model')
-        
+
     Pool.register(
         wizard.CreateExemplaries,
         wizard.FuseBooks,

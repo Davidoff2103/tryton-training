@@ -273,7 +273,7 @@ class Book(ModelSQL, ModelView):
         for exemplary in self.exemplaries:
             if not exemplary.acquisition_date:
                 continue
-            if not latest or(
+            if not latest or (
                     latest.acquisition_date < exemplary.acquisition_date):
                 latest = exemplary
         return latest.id if latest else None
