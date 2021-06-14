@@ -119,8 +119,8 @@ class Return(Wizard):
             user = Transaction().context.get('active_id')
             checkouts = [x for x in Checkout.search([
                         ('user', '=', user), ('return_date', '=', None)])]
-        elif (Transaction().context.get('active_model')
-                == 'library.user.checkout'):
+        elif (Transaction().context.get('active_model') ==
+                'library.user.checkout'):
             checkouts = Checkout.browse(
                 Transaction().context.get('active_ids'))
             if len({x.user for x in checkouts}) != 1:

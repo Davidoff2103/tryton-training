@@ -14,8 +14,8 @@ from trytond.pyson import If, Eval, Date
 __all__ = [
     'User',
     'Checkout',
-    'Exemplary',
     'Book',
+    'Exemplary',
     ]
 
 
@@ -69,8 +69,8 @@ class User(ModelSQL, ModelView):
         elif name == 'late_checkedout_books':
             column = Count(checkout_table.id)
             where = (checkout_table.return_date == Null) & (
-                checkout_table.date < datetime.date.today()
-                + datetime.timedelta(days=20))
+                checkout_table.date < datetime.date.today() +
+                datetime.timedelta(days=20))
         elif name == 'expected_return_date':
             column = Min(checkout_table.date)
             where = checkout_table.return_date == Null
@@ -94,8 +94,8 @@ class User(ModelSQL, ModelView):
             condition=checkout.user == user.id)
 
         query = query_table.select(user.id,
-            where=(checkout.return_date == Null)
-            | (checkout.id == Null),
+            where=(checkout.return_date == Null) |
+            (checkout.id == Null),
             group_by=user.id,
             having=Operator(Min(checkout.date), value))
         return [('id', 'in', query)]
@@ -117,9 +117,9 @@ class Checkout(ModelSQL, ModelView):
                     ('return_date', '>=', Eval('date'))])],
         depends=['date'])
     expected_return_date = fields.Function(
-        fields.Date('Expected return date', help='The date at which the '
+        fields.Date('Expected return date', help='The date at which the  '
             'exemplary is supposed to be returned'),
-        'getter_expected_return_date')
+        'getter_expected_return_date', searcher='search_expected_return_date')
 
     def getter_expected_return_date(self, name):
         return self.date + datetime.timedelta(days=20)
