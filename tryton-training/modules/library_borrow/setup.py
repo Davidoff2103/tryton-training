@@ -1,11 +1,9 @@
-
 #!/usr/bin/env python3
 # This file is part of Tryton.  The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
 
 import io
 import os
-import re
 from configparser import ConfigParser
 from setuptools import setup
 
@@ -83,4 +81,3 @@ setup(name=name,
     library_borrow = trytond.modules.library_borrow
     """,
     )
-

@@ -69,8 +69,8 @@ class User(ModelSQL, ModelView):
         elif name == 'late_checkedout_books':
             column = Count(checkout_table.id)
             where = (checkout_table.return_date == Null) & (
-                checkout_table.date < datetime.date.today() +
-                datetime.timedelta(days=20))
+                checkout_table.date < datetime.date.today()
+                + datetime.timedelta(days=20))
         elif name == 'expected_return_date':
             column = Min(checkout_table.date)
             where = checkout_table.return_date == Null
@@ -94,8 +94,8 @@ class User(ModelSQL, ModelView):
             condition=checkout.user == user.id)
 
         query = query_table.select(user.id,
-            where=(checkout.return_date == Null) |
-            (checkout.id == Null),
+            where=(checkout.return_date == Null)
+            | (checkout.id == Null),
             group_by=user.id,
             having=Operator(Min(checkout.date), value))
         return [('id', 'in', query)]
