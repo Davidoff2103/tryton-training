@@ -23,6 +23,7 @@ class User(ModelSQL, ModelView):
     'Library User'
     __name__ = 'library.user'
 
+    checkouts = fields.One2Many('library.user.checkout', 'user', 'Checkouts')
     name = fields.Char('Name', required=True)
     registration_date = fields.Date('Registration Date', domain=[
             If(~Eval('registration_date'), [],
@@ -40,14 +41,6 @@ class User(ModelSQL, ModelView):
         fields.Date('Expected return date', help='The date at which the user '
             'is (or was) expected to return his books'),
         'getter_checkedout_books', searcher='search_expected_return_date')
-
-    @classmethod
-    def getter_checkedout_books(cls, users, name):
-        return {x.id: None for x in users}
-
-    @classmethod
-    def search_expected_return_date(cls, name, clause):
-        return []
 
     @classmethod
     def getter_checkedout_books(cls, users, name):
@@ -76,8 +69,8 @@ class User(ModelSQL, ModelView):
         elif name == 'late_checkedout_books':
             column = Count(checkout_table.id)
             where = (checkout_table.return_date == Null) & (
-                checkout_table.date < datetime.date.today() +
-                datetime.timedelta(days=20))
+                checkout_table.date < datetime.date.today()
+                + datetime.timedelta(days=20))
         elif name == 'expected_return_date':
             column = Min(checkout_table.date)
             where = checkout_table.return_date == Null
@@ -101,8 +94,8 @@ class User(ModelSQL, ModelView):
             condition=checkout.user == user.id)
 
         query = query_table.select(user.id,
-            where=(checkout.return_date == Null) |
-            (checkout.id == Null),
+            where=(checkout.return_date == Null)
+            | (checkout.id == Null),
             group_by=user.id,
             having=Operator(Min(checkout.date), value))
         return [('id', 'in', query)]
@@ -112,6 +105,10 @@ class Checkout(ModelSQL, ModelView):
     'Checkout'
     __name__ = 'library.user.checkout'
 
+    user = fields.Many2One('library.user', 'User', required=True,
+        ondelete='CASCADE', select=True)
+    exemplary = fields.Many2One('library.book.exemplary', 'Exemplary',
+        required=True, ondelete='CASCADE', select=True)
     date = fields.Date('Date', required=True, domain=[
             ('date', '<=', Date())])
     return_date = fields.Date('Return Date', domain=[
@@ -138,19 +135,59 @@ class Checkout(ModelSQL, ModelView):
         return [('date', operator, value)]
 
 
+class Book(metaclass=PoolMeta):
+    __name__ = 'library.book'
+
+    is_available = fields.Function(
+        fields.Boolean('Is available', help='If True, at least an exemplary '
+            'of this book is currently available for borrowing'),
+        'getter_is_available', searcher='search_is_available')
+
+    @classmethod
+    def getter_is_available(cls, books, name):
+        pool = Pool()
+        checkout = pool.get('library.user.checkout').__table__()
+        exemplary = pool.get('library.book.exemplary').__table__()
+        book = cls.__table__()
+        result = {x.id: False for x in books}
+        cursor = Transaction().connection.cursor()
+        cursor.execute(*book.join(exemplary,
+                condition=(exemplary.book == book.id)
+                ).join(checkout, 'LEFT OUTER',
+                condition=(exemplary.id == checkout.exemplary)
+                ).select(book.id,
+                where=(checkout.return_date != Null) | (checkout.id == Null)))
+        for book_id, in cursor.fetchall():
+            result[book_id] = True
+        return result
+
+    @classmethod
+    def search_is_available(cls, name, clause):
+        _, operator, value = clause
+        if operator == '!=':
+            value = not value
+        pool = Pool()
+        checkout = pool.get('library.user.checkout').__table__()
+        exemplary = pool.get('library.book.exemplary').__table__()
+        book = cls.__table__()
+        query = book.join(exemplary,
+            condition=(exemplary.book == book.id)
+            ).join(checkout, 'LEFT OUTER',
+            condition=(exemplary.id == checkout.exemplary)
+            ).select(book.id,
+            where=(checkout.return_date != Null) | (checkout.id == Null))
+        return [('id', 'in' if value else 'not in', query)]
+
+
 class Exemplary(metaclass=PoolMeta):
     __name__ = 'library.book.exemplary'
 
     checkouts = fields.One2Many('library.user.checkout', 'exemplary',
         'Checkouts')
-    expected_return_date = fields.Function(
-        fields.Date('Expected return date', help='The date at which the '
-            'exemplary is supposed to be returned'),
-        'getter_expected_return_date')
-
-    @classmethod
-    def getter_is_available(cls, exemplaries, name):
-        return {x.id: None for x in exemplaries}
+    is_available = fields.Function(
+        fields.Boolean('Is available', help='If True, the exemplary is '
+            'currently available for borrowing'),
+        'getter_is_available', searcher='search_is_available')
 
     @classmethod
     def getter_is_available(cls, exemplaries, name):
@@ -195,50 +232,3 @@ class Exemplary(metaclass=PoolMeta):
             ).select(exemplary.id,
             where=(checkout.return_date != Null) | (checkout.id == Null))
         return [('id', 'in' if value else 'not in', query)]
-
-
-class Book(metaclass=PoolMeta):
-    __name__ = 'library.book'
-
-    is_available = fields.Function(
-        fields.Boolean('Is available', help='If True, at least an exemplary '
-            'of this book is currently available for borrowing'),
-        'getter_is_available', searcher='search_is_available')
-
-    @classmethod
-    def search_is_available(cls, name, clause):
-        _, operator, value = clause
-        if operator == '!=':
-            value = not value
-        pool = Pool()
-        checkout = pool.get('library.user.checkout').__table__()
-        exemplary = pool.get('library.book.exemplary').__table__()
-        book = cls.__table__()
-        query = book.join(exemplary,
-            condition=(exemplary.book == book.id)
-            ).join(checkout, 'LEFT OUTER',
-            condition=(exemplary.id == checkout.exemplary)
-            ).select(book.id,
-            where=(checkout.return_date != Null) | (checkout.id == Null))
-        return [('id', 'in' if value else 'not in', query)]
-
-    @classmethod
-    def getter_is_available(cls, books, name):
-        pool = Pool()
-        checkout = pool.get('library.user.checkout').__table__()
-        exemplary = pool.get('library.book.exemplary').__table__()
-        book = cls.__table__()
-        result = {x.id: False for x in books}
-        cursor = Transaction().connection.cursor()
-        cursor.execute(*book.join(exemplary,
-                condition=(exemplary.book == book.id)
-                ).join(checkout, 'LEFT OUTER',
-                condition=(exemplary.id == checkout.exemplary)
-                ).select(book.id,
-                where=(checkout.return_date != Null) | (checkout.id == Null)))
-        for book_id, in cursor.fetchall():
-            result[book_id] = True
-        return result
-
-
-

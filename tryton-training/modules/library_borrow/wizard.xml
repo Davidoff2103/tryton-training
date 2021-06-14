@@ -11,12 +11,12 @@
         <record model="ir.action.keyword" id="act_library_user_borrow_keyword">
             <field name="keyword">form_action</field>
             <field name="model">library.user,-1</field>
-            <field name="action" ref="act_library_user_borrow" />
+            <field name="action" ref="act_library_user_borrow"/>
         </record>
         <record model="ir.action.keyword" id="act_library_book_borrow_keyword">
             <field name="keyword">form_action</field>
             <field name="model">library.book,-1</field>
-            <field name="action" ref="act_library_user_borrow" />
+            <field name="action" ref="act_library_user_borrow"/>
         </record>
         <!-- ####################### -->
         <!-- # Borrow Select Books # -->
@@ -36,12 +36,12 @@
         <record model="ir.action.keyword" id="act_library_user_return_keyword">
             <field name="keyword">form_action</field>
             <field name="model">library.user,-1</field>
-            <field name="action" ref="act_library_user_return" />
+            <field name="action" ref="act_library_user_return"/>
         </record>
         <record model="ir.action.keyword" id="act_library_checkout_return_keyword">
             <field name="keyword">form_action</field>
             <field name="model">library.user.checkout,-1</field>
-            <field name="action" ref="act_library_user_return" />
+            <field name="action" ref="act_library_user_return"/>
         </record>
         <!-- ########################### -->
         <!-- # Return Select Checkouts # -->
